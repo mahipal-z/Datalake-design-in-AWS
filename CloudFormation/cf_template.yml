@@ -77,3 +77,36 @@ Resources:
                 Resource:
                   - 'arn:aws:s3:::my-source-bucket'
                   - 'arn:aws:s3:::my-destination-bucket/*'
+                
+  MyGlueJobRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: mz-glue-job-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: my-glue-job-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource:
+                  - 'arn:aws:s3:::datalake-raw-s3-mz/*'
+                  - 'arn:aws:s3:::datalake-processed-s3-mz/*'
+
+  MyGlueJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: my-glue-job
+      Role: !GetAtt MyGlueJobRole.Arn
+      Command:
+        Name: pythonshell
+        ScriptLocation: 's3://datalake-raw-s3-mz/combine_csv.py'
