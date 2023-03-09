@@ -110,3 +110,34 @@ Resources:
       Command:
         Name: pythonshell
         ScriptLocation: 's3://datalake-raw-s3-mz/combine_csv.py'
+
+  SecondGlueJobRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "glue.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "GluePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "s3:*"
+                Resource: "arn:aws:s3:::*"
+              - Effect: "Allow"
+                Action: "glue:*"
+                Resource: "*"
+
+  SecondGlueJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: second-glue-job
+      Role: !GetAtt SecondGlueJobRole.Arn
+      Command:
+        Name: pythonshell
+        ScriptLocation: 's3://datalake-processed-s3-mz/transform_to_parquet.py'
