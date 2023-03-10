@@ -32,8 +32,8 @@ Resources:
           s3 = boto3.client('s3')
 
           def lambda_handler(event, context):
-              source_bucket = 'datalake-source-s3-mz'
-              destination_bucket = 'datalake-raw-s3-mz'
+              source_bucket = !Ref SourceS3Bucket
+              destination_bucket = !Ref RawS3Bucket
               key = event['Records'][0]['s3']['object']['key']
               
               # Copy the object from source bucket to destination bucket
@@ -75,8 +75,10 @@ Resources:
                   - 's3:GetObject'
                   - 's3:PutObject'
                 Resource:
-                  - 'arn:aws:s3:::my-source-bucket'
-                  - 'arn:aws:s3:::my-destination-bucket/*'
+                  - !GetAtt SourceS3Bucket.Arn
+                  - !Sub '${SourceS3Bucket.Arn}/*'
+                  - !GetAtt RawS3Bucket.Arn
+                  - !Sub '${RawS3Bucket.Arn}/*'
                 
   MyGlueJobRole:
     Type: 'AWS::IAM::Role'
@@ -99,8 +101,10 @@ Resources:
                   - 's3:GetObject'
                   - 's3:PutObject'
                 Resource:
-                  - 'arn:aws:s3:::datalake-raw-s3-mz/*'
-                  - 'arn:aws:s3:::datalake-processed-s3-mz/*'
+                  - !Sub 'arn:aws:s3:::${RawS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${RawS3Bucket}/*'
+                  - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}/*'
 
   MyGlueJob:
     Type: 'AWS::Glue::Job'
@@ -109,4 +113,4 @@ Resources:
       Role: !GetAtt MyGlueJobRole.Arn
       Command:
         Name: pythonshell
-        ScriptLocation: 's3://datalake-raw-s3-mz/combine_csv.py'
+        ScriptLocation: !Sub '${RawS3Bucket}/combine_csv.py'
