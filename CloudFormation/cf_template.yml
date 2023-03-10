@@ -113,7 +113,7 @@ Resources:
       Role: !GetAtt MyGlueJobRole.Arn
       Command:
         Name: pythonshell
-        ScriptLocation: !Sub '${RawS3Bucket}/combine_csv.py'
+        ScriptLocation: !Sub 's3://${RawS3Bucket}/combine_csv.py'
 
   SecondGlueJobRole:
     Type: "AWS::IAM::Role"
@@ -144,4 +144,4 @@ Resources:
       Role: !GetAtt SecondGlueJobRole.Arn
       Command:
         Name: pythonshell
-        ScriptLocation: !Sub '${ProcessedS3Bucket}/transform_to_parquet.py'
+        ScriptLocation: !Sub 's3://${ProcessedS3Bucket}/transform_to_parquet.py'
