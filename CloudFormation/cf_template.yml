@@ -79,3 +79,38 @@ Resources:
                   - !Sub '${SourceS3Bucket.Arn}/*'
                   - !GetAtt RawS3Bucket.Arn
                   - !Sub '${RawS3Bucket.Arn}/*'
+                
+  MyGlueJobRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: mz-glue-job-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: my-glue-job-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${RawS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${RawS3Bucket}/*'
+                  - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}/*'
+
+  MyGlueJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: my-glue-job
+      Role: !GetAtt MyGlueJobRole.Arn
+      Command:
+        Name: pythonshell
+        ScriptLocation: !Sub '${RawS3Bucket}/combine_csv.py
