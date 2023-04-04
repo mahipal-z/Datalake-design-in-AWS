@@ -1,91 +1,27 @@
+Parameters:
+  SourceBucketName:
+    Type: String
+    Description: Name of the source S3 bucket that contains the files to copy
+
 Resources:
-  SourceS3Bucket:
-    Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Delete
-    Properties:
-      BucketName: 'datalake-source-s3-mz'
-     
   RawS3Bucket:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
     Properties:
       BucketName: 'datalake-raw-s3-mz'
-      
+    
   ProcessedS3Bucket:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
     Properties:
       BucketName: 'datalake-processed-s3-mz'
-     
+    
   TransformedS3Bucket:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
-    DependsOn: FetchLambdaFunction
     Properties:
       BucketName: 'datalake-transformed-s3-mz'
-      NotificationConfiguration:
-        LambdaConfigurations:
-            - Event: 's3:ObjectCreated:*'
-              Function: !GetAtt FetchLambdaFunction.Arn
-
-  FetchLambdaExecutionRole:
-    Type: "AWS::IAM::Role"
-    Properties:
-      RoleName: fetch-lambda-execution-role
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Path: "/"
-      Policies:
-        - PolicyName: "S3Access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:PutObject
-                Resource: !Sub "arn:aws:s3:::${SourceS3Bucket}/*"
-  
-  FetchLambdaFunction:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      FunctionName: fetch-lambda-function
-      Handler: index.handler
-      Role: !GetAtt FetchLambdaExecutionRole.Arn
-      Runtime: python3.8
-      Code:
-        ZipFile: |
-          import boto3
-          import requests
-          import io
-
-          def handler(event, context):
-              url1 = 'https://raw.githubusercontent.com/mahipal-z/Datalake-ml-mz/Datasets/dataset - 1.csv'
-              url2 = 'https://raw.githubusercontent.com/mahipal-z/Datalake-ml-mz/Datasets/dataset - 2.csv'
-              url3 = 'https://raw.githubusercontent.com/mahipal-z/Datalake-ml-mz/CloudFormation/combine_csv.py'
-              url4 = 'https://raw.githubusercontent.com/mahipal-z/Datalake-ml-mz/CloudFormation/transform_to_parquet.py'
-              response1 = requests.get(url1)
-              response2 = requests.get(url2)
-              response3 = requests.get(url3)
-              response4 = requests.get(url4)
-              s3 = boto3.client('s3')
-              s3.upload_fileobj(io.BytesIO(response1.content), SourceS3Bucket, 'dataset - 1.csv')
-              s3.upload_fileobj(io.BytesIO(response2.content), SourceS3Bucket, 'dataset - 2.csv')
-              s3.upload_fileobj(io.BytesIO(response1.content), RawS3Bucket, 'combine_csv.py')
-              s3.upload_fileobj(io.BytesIO(response1.content), ProcessedS3Bucket, 'transform_to_parquet.py')
-
-  S3InvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref FetchLambdaFunction
-      Principal: s3.amazonaws.com
-      SourceArn: 'arn:aws:s3:::datalake-transformed-s3-mz'
-
+     
   CopyLambdaExecutionRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -114,8 +50,8 @@ Resources:
                   - 's3:GetObject'
                   - 's3:PutObject'
                 Resource:
-                  - !GetAtt SourceS3Bucket.Arn
-                  - !Sub '${SourceS3Bucket.Arn}/*'
+                  - !Sub 'arn:aws:s3:::${SourceBucketName}/*'
+                  - !Sub 'arn:aws:s3:::${SourceBucketName}'
                   - !GetAtt RawS3Bucket.Arn
                   - !Sub '${RawS3Bucket.Arn}/*'
 
@@ -123,7 +59,6 @@ Resources:
     Type: 'AWS::Lambda::Function'
     DependsOn:
       - CopyLambdaExecutionRole
-      - SourceS3Bucket
       - RawS3Bucket
     Properties:
       FunctionName: copy-lambda-function
@@ -136,7 +71,7 @@ Resources:
           s3 = boto3.client('s3')
 
           def lambda_handler(event, context):
-              source_bucket = !Ref SourceS3Bucket
+              source_bucket = event['SourceBucketName']
               destination_bucket = !Ref RawS3Bucket
               key = event['Records'][0]['s3']['object']['key']
               
@@ -150,6 +85,25 @@ Resources:
       Runtime: python3.9
       Timeout: 60
       MemorySize: 128
+
+  # CloudWatch Events rule to trigger the Lambda function on demand
+  CopyLambdaEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: 'Trigger copy lambda function on demand'
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - s3.amazonaws.com
+          eventName:
+            - CopyObject
+      Targets:
+        - Arn: !GetAtt CopyLambdaFunction.Arn
+          Id: CopyLambdaFunctionTarget
 
   CombineGlueJobRole:
     Type: 'AWS::IAM::Role'
