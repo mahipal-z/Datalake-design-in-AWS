@@ -17,6 +17,17 @@ Resources:
     Properties:
       BucketName: 'datalake-processed-s3-mz'
      
+  TransformedS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    DependsOn: FetchLambdaFunction
+    Properties:
+      BucketName: 'datalake-transformed-s3-mz'
+      NotificationConfiguration:
+        LambdaConfigurations:
+            - Event: 's3:ObjectCreated:*'
+              Function: !GetAtt FetchLambdaFunction.Arn
+
   FetchLambdaExecutionRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -41,8 +52,6 @@ Resources:
   
   FetchLambdaFunction:
     Type: 'AWS::Lambda::Function'
-    DependsOn:
-      - FetchLambdaExecutionRole
     Properties:
       FunctionName: fetch-lambda-function
       Handler: index.handler
@@ -69,14 +78,13 @@ Resources:
               s3.upload_fileobj(io.BytesIO(response1.content), RawS3Bucket, 'combine_csv.py')
               s3.upload_fileobj(io.BytesIO(response1.content), ProcessedS3Bucket, 'transform_to_parquet.py')
 
-  TransformedS3Bucket:
-    Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Delete
+  S3InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
     Properties:
-      BucketName: 'datalake-transformed-s3-mz'
-      LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt FetchLambdaFunction.Arn 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref FetchLambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: 'arn:aws:s3:::datalake-transformed-s3-mz'
 
   CopyLambdaExecutionRole:
     Type: 'AWS::IAM::Role'
