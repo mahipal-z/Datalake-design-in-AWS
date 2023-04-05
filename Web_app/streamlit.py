@@ -13,7 +13,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config( 
     page_title="Yield Prediction App",
-    page_icon="/Users/mahip_cpp2xf3/Datalake-ml-mz/Web app/crop.PNG" 
+    page_icon="C:/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG" 
 )
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
