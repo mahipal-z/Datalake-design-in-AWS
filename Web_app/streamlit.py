@@ -7,13 +7,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from PIL import Image
 #import pickle as pkl
 #import shap
 import streamlit.components.v1 as components
-
+image1 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG')
 st.set_page_config( 
     page_title="Yield Prediction App",
-    page_icon="C:/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG" 
+    page_icon=image1 
 )
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
@@ -28,7 +29,7 @@ st.subheader("How much yield can your farm generate next season?💸 "
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.image("/Users/mahip_cpp2xf3/Datalake-ml-mz/Web app/crop.PNG")
+    st.image(image1)
 
 with col2:
     st.write("""As the world population continues to grow, the demand for food increases, making it more important than ever to optimize farming practices and increase crop yields. One way to achieve this is through the use of machine learning algorithms to predict crop yields and gain insights from the data. By leveraging the power of data science, more informed decisions can be made about farming practices, crop yields can be optimized, and ultimately profits can be increased. 
