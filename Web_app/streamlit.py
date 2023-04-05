@@ -29,8 +29,7 @@ st.subheader("How much yield can your farm generate next season?💸 "
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.image(image1, caption='Source: https://graindatasolutions.com/data-science-artificial-intelligence-applications-agricultural-practices-opportunities-challenges/
-')
+    st.image(image1, caption='Source: https://graindatasolutions.com/')
 
 with col2:
     st.write("""As the world population continues to grow, the demand for food increases, making it more important than ever to optimize farming practices and increase crop yields. 
