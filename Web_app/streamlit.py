@@ -29,10 +29,13 @@ st.subheader("How much yield can your farm generate next season?💸 "
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.image(image1)
+    st.image(image1, caption='Source: https://graindatasolutions.com/data-science-artificial-intelligence-applications-agricultural-practices-opportunities-challenges/
+')
 
 with col2:
-    st.write("""As the world population continues to grow, the demand for food increases, making it more important than ever to optimize farming practices and increase crop yields. One way to achieve this is through the use of machine learning algorithms to predict crop yields and gain insights from the data. By leveraging the power of data science, more informed decisions can be made about farming practices, crop yields can be optimized, and ultimately profits can be increased. 
+    st.write("""As the world population continues to grow, the demand for food increases, making it more important than ever to optimize farming practices and increase crop yields. 
+    Using machine learning algorithms crop yields can be estimated by leveraging historical data. 
+    This will help make more informed decisions about farming practices, optimize crop yield, and ultimately increased profits. 
 """)
     
 st.subheader("To predict the farm yield, you need to follow the steps below:")
