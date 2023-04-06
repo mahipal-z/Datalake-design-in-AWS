@@ -12,6 +12,7 @@ from PIL import Image
 #import shap
 import streamlit.components.v1 as components
 image1 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG')
+image2 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/farm_params.jpg')
 st.set_page_config( 
     page_title="Yield Prediction App",
     page_icon=image1 
@@ -33,8 +34,8 @@ with col1:
 
 with col2:
     st.write("""As the world population continues to grow, the demand for food increases, making it more important than ever to optimize farming practices and increase crop yields. 
-    Using machine learning algorithms crop yields can be estimated by leveraging historical data. 
-    This will help make more informed decisions about farming practices, optimize crop yield, and ultimately increased profits. 
+    \nUsing machine learning algorithms crop yields can be estimated by leveraging historical data. 
+    This will help make more informed decisions about farming practices, optimize crop yield, and ultimately, increase profits. 
 """)
     
 st.subheader("To predict the farm yield, you need to follow the steps below:")
@@ -48,4 +49,41 @@ st.subheader("Below you could find prediction result: ")
 ######################
 #sidebar layout
 ######################
+
+st.sidebar.title("Farming Conditions")
+st.sidebar.image(image2, width=200)
+st.sidebar.write("Please choose farming parameters")
+
+#input features
+region_code =st.sidebar.selectbox('Select region code', ("1", "2", "3", "4", "5", "6"))
+f_level =st.sidebar.selectbox('Select level of fertilization', ("0", "1", "2", "3", "4", "5"))
+water =st.sidebar.slider("Set amount of water supply per hectare",min_value=0.0, max_value=15.0,step=0.1)
+p_amount =st.sidebar.slider("Set amount of pesticides use per hectare",min_value=0.0, max_value=10.0,step=0.1)
+p_types = st.sidebar.multiselect("Select one or multiple types of pesticides used", ('A', 'B', 'C', 'D'))
+
+def preprocess(region_code, f_level, p_types): 
+# Pre-processing user input
+    region_list = [0,0,0,0,0,0]
+    region_list[int(region_code)-1] = 1
+
+    f_dict = {"0":0, "1":1, "2":2, "3":3, "4":4, "5":5} 
+    f_level = f_level.replace(f_dict)
+
+    pests = ["A","B","C","D"]
+    for item in pests:
+        if item in p_types:
+            pests[pests.index(item)] = 1
+        else:
+            pests[pests.index(item)] = 0
+    
+    user_input_dict={'f_level':[f_level], 'pests':[pests], 'region_list':[region_list]} 
+     
+    return user_input_dict
+
+#user_input=preprocess
+user_input_dict=preprocess(region_code, f_level, p_types) 
+
+#predict button
+btn_predict = st.sidebar.button("Predict")
+
 
