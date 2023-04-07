@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 #import base64
-#from sklearn.linear_model import LogisticRegression
-#from sklearn.model_selection import train_test_split
-#from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import Ridge
+import joblib
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,6 +13,10 @@ from PIL import Image
 #import pickle as pkl
 #import shap
 import streamlit.components.v1 as components
+
+model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Datasets/best_model.sav")
+
+
 image1 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG')
 image2 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/farm_params.jpg')
 st.set_page_config( 
@@ -24,8 +30,8 @@ st.set_option('deprecation.showPyplotGlobalUse', False)
 ######################
 
 st.title("Farm Yield Prediction")
-st.subheader("How much yield can your farm generate next season?💸 "
-                 "This machine learning app will help you to make a prediction for your next farming methodology!")
+st.subheader("How much yield can your farm generate next season?:ear_of_rice: ")
+st.markdown("**This machine learning app will help you to make a prediction for your next farming methodology!**")
 
 col1, col2 = st.columns([1, 1])
 
@@ -67,7 +73,7 @@ def preprocess(region_code, f_level, p_types):
     region_list[int(region_code)-1] = 1
 
     f_dict = {"0":0, "1":1, "2":2, "3":3, "4":4, "5":5} 
-    f_level = f_level.replace(f_dict)
+    f_level = f_dict[f_level]
 
     pests = ["A","B","C","D"]
     for item in pests:
@@ -76,14 +82,28 @@ def preprocess(region_code, f_level, p_types):
         else:
             pests[pests.index(item)] = 0
     
-    user_input_dict={'f_level':[f_level], 'pests':[pests], 'region_list':[region_list]} 
+    input_dict={'f_level':f_level, 'pests':pests, 'region_list':region_list} 
      
-    return user_input_dict
+    return input_dict
 
 #user_input=preprocess
-user_input_dict=preprocess(region_code, f_level, p_types) 
+input_dict=preprocess(region_code, f_level, p_types) 
+uv = 72
+inputs = np.array([water,uv,f_level,p_amount,input_dict['pests'][0],input_dict['pests'][1],
+                   input_dict['pests'][2],input_dict['pests'][3],input_dict['region_list'][0],
+                   input_dict['region_list'][1],input_dict['region_list'][2],input_dict['region_list'][3],
+                   input_dict['region_list'][4],input_dict['region_list'][5],p_amount**2]).reshape(1,-1)
+test_input = pd.DataFrame(inputs)
 
 #predict button
 btn_predict = st.sidebar.button("Predict")
+
+if btn_predict:
+    pred = model.predict(test_input)
+    result = round(pred[0], 2)
+
+    st.write('**:green[The estimated yield per hectare for the given case is]**', result)
+        
+
 
 
