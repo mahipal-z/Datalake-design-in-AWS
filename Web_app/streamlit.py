@@ -93,7 +93,9 @@ inputs = np.array([water,uv,f_level,p_amount,input_dict['pests'][0],input_dict['
                    input_dict['pests'][2],input_dict['pests'][3],input_dict['region_list'][0],
                    input_dict['region_list'][1],input_dict['region_list'][2],input_dict['region_list'][3],
                    input_dict['region_list'][4],input_dict['region_list'][5],p_amount**2]).reshape(1,-1)
-test_input = pd.DataFrame(inputs)
+columns = ['water','uv','fertilizer_usage','pesticides','pesticide_a','pesticide_b','pesticide_c','pesticide_d',
+           'region_1','region_2','region_3','region_4','region_5','region_6','pesticides_2']
+test_input = pd.DataFrame(inputs, columns=columns)
 
 #predict button
 btn_predict = st.sidebar.button("Predict")
