@@ -84,12 +84,16 @@ Resources:
               
               print('source bucket is: {}.'.format(source_bucket))
               destination_bucket = os.environ['RawBucketName']
+
+              for obj in ['dataset - 1.csv', 'dataset - 2.csv']:
+                copy_source = {'Bucket': source_bucket, 'Key': obj}
+                s3.copy_object(Bucket=destination_bucket, CopySource=copy_source, Key=obj)
               
               #file name to be copied
-              key = event['Records'][0]['s3']['object']['key']
+              #key = event['Records'][0]['s3']['object']['key']
               
               # Copy the object from source bucket to destination bucket
-              s3.copy_object(Bucket=destination_bucket, CopySource={'Bucket': source_bucket, 'Key': key}, Key=key)
+              #s3.copy_object(Bucket=destination_bucket, CopySource={'Bucket': source_bucket, 'Key': key}, Key=key)
               
               return {
                   'statusCode': 200,
