@@ -74,10 +74,8 @@ Resources:
           import os
           
           s3 = boto3.client('s3')
-
           def lambda_handler(event, context):
               print(event)
-
               #to get source bucket name using environment variable
               source_bucket = os.environ['SourceName']
               
