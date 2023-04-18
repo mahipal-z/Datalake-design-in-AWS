@@ -1,25 +1,64 @@
 import boto3
 import pandas as pd
+import os
+import datetime
+from io import StringIO
+from awsglue.utils import getResolvedOptions
+import sys
 
 # Define the S3 bucket names and file paths
-src_bucket = 'datalake-raw-s3-mz'
-dest_bucket = 'datalake-processed-s3-mz'
-src_file1 = 'dataset - 1.csv'
-src_file2 = 'dataset - 2.csv'
+args = getResolvedOptions(sys.argv, ['raw_bucket_name', 'processed_bucket_name'])
+#print("args:{}".format(args))
+src_bucket = args['raw_bucket_name']
+dest_bucket = args['processed_bucket_name']
+#print("src_bucket:{}".format(src_bucket))
+
 dest_file = 'combined_file.csv'
 
 # Initialize the S3 client
 s3 = boto3.client('s3')
 
-# Read the CSV files from S3 into pandas dataframes
-df1 = pd.read_csv(f's3://{src_bucket}/{src_file1}')
-df2 = pd.read_csv(f's3://{src_bucket}/{src_file2}')
+today = datetime.datetime.today().strftime('%Y-%m-%d')  
+src_prefix = today + '/'
+dest_prefix = today + '/'
 
-# Combine the dataframes into one
-combined_df = pd.concat([df1, df2], ignore_index=True)
+# Get the list of object keys in the input S3 bucket
+src_objects = s3.list_objects_v2(Bucket=src_bucket, Prefix=src_prefix)
+#print("src_objects:{}".format(src_objects))
+object_keys = [obj['Key'] for obj in src_objects['Contents']]
+#print("object_keys:{}".format(object_keys))
 
-# Write the combined dataframe to S3 as a CSV file
-combined_df.to_csv(dest_file)
+# Check if folder with same name exists in destination bucket and delete it
+existing_objects = s3.list_objects_v2(Bucket=dest_bucket, Prefix=dest_prefix)
+if 'Contents' in existing_objects:
+  delete_keys = [{'Key': obj['Key']} for obj in existing_objects['Contents']]
+  s3.delete_objects(Bucket=dest_bucket, Delete={'Objects': delete_keys})
 
-# Upload the resulting file to the destination S3 bucket
-s3.upload_file(dest_file, dest_bucket, dest_file)
+# Concatenate all CSV files in the input S3 bucket
+dfs = []
+for key in object_keys:
+    if key.endswith('.csv'):
+        response = s3.get_object(Bucket=src_bucket, Key=key)
+        #print("response:{}".format(response))
+        csv_content = response['Body'].read().decode('utf-8')
+        df = pd.read_csv(pd.compat.StringIO(csv_content))
+        #print("df:{}".format(df))
+        dfs.append(df)
+result = pd.concat(dfs, ignore_index=True)
+
+#print("result:{}".format(result))
+#In above code, we read the content of the S3 object returned by the get_object API call and decode it from
+#  bytes to a string using the utf-8 encoding. The resulting string is the raw CSV data. 
+#Then, we create a pandas DataFrame from the CSV data by first wrapping the csv_content string in a StringIO object from
+#  the io module using pd.compat.StringIO(csv_content)
+#The pd.compat module is used to ensure compatibility between different versions of pandas.
+#this approach of reading CSV data from an S3 object into a DataFrame using StringIO is memory efficient and 
+# avoids having to store the CSV data in a temporary file on disk. 
+# It is suitable for handling large CSV files that may not fit into memory.
+
+# Upload the concatenated CSV file to the output S3 bucket
+dest_key = os.path.join(dest_prefix, dest_file)
+print("dest_key:{}".format(dest_key))
+
+if not result.empty:
+    s3.put_object(Body=result.to_csv(index=False), Bucket=dest_bucket, Key=dest_key)
