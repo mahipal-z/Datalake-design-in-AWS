@@ -48,12 +48,21 @@ Resources:
                 Action:
                   - 's3:ListBucket'
                   - 's3:GetObject'
-                  - 's3:PutObject'
+                  - 's3:PutObject'                
                 Resource:
                   - !Sub 'arn:aws:s3:::${SourceBucketName}/*'
                   - !Sub 'arn:aws:s3:::${SourceBucketName}'
                   - !GetAtt RawS3Bucket.Arn
                   - !Sub '${RawS3Bucket.Arn}/*'
+                  
+        - PolicyName: 'lambda-service-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'glue:StartJobRun'
+                Resource: 
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${CombineGlueJob}'
 
   CopyLambdaFunction:
     Type: 'AWS::Lambda::Function'
@@ -68,12 +77,16 @@ Resources:
         Variables:
           RawBucketName: !Ref RawS3Bucket
           SourceName: !Ref SourceBucketName
+          ProcessedBucketName: !Ref ProcessedS3Bucket
+          GlueJobName: !Ref CombineGlueJob
       Code:
         ZipFile: |
           import boto3
           import os
+          import datetime
           
-          s3 = boto3.client('s3')
+          s3 = boto3.client('s3')          
+          glue = boto3.client('glue')
           def lambda_handler(event, context):
               print(event)
               #to get source bucket name using environment variable
@@ -85,12 +98,42 @@ Resources:
               print('source bucket is: {}.'.format(source_bucket))
               destination_bucket = os.environ['RawBucketName']
               
-              #file name to be copied
-              key = event['Records'][0]['s3']['object']['key']
-              
-              # Copy the object from source bucket to destination bucket
-              s3.copy_object(Bucket=destination_bucket, CopySource={'Bucket': source_bucket, 'Key': key}, Key=key)
-              
+
+              today = datetime.datetime.today().strftime('%Y-%m-%d')  
+              src_prefix = today + '/'
+              dest_prefix = today + '/'
+              #print('today={}'.format(today))
+              #print('src_prefix={}'.format(src_prefix))
+              #print('dest_prefix={}'.format(dest_prefix))          
+
+              src_objects = s3.list_objects(Bucket=source_bucket, Prefix=src_prefix)
+
+              # Check if folder with same name exists in destination bucket and delete it
+              existing_objects = s3.list_objects_v2(Bucket=destination_bucket, Prefix=dest_prefix)
+              if 'Content' in existing_objects:
+                delete_keys = [{'Key': obj['Key']} for obj in existing_objects['Contents']]
+                s3.delete_objects(Bucket=destination_bucket, Delete={'Objects': delete_keys})
+
+              if 'Contents' in src_objects:
+                for obj in src_objects['Contents']:
+                  if obj['Key'].endswith('.csv'):
+                    key = obj['Key'].split('/')[-1]
+                    src_key = obj['Key']
+                    dest_key = os.path.join(dest_prefix, key)
+                    s3.copy_object(Bucket=destination_bucket, CopySource={'Bucket': source_bucket, 'Key': src_key}, Key=dest_key)
+
+              # Trigger the Glue job to combine the CSV files
+              glue_job_name = os.environ['GlueJobName']
+              processed_bucket = os.environ['ProcessedBucketName']
+              glue_start_job_args = {
+                  'JobName': glue_job_name,
+                  'Arguments': {
+                  "--raw_bucket_name": destination_bucket,
+                  "--processed_bucket_name": processed_bucket
+                  }                  
+                  }
+              glue.start_job_run(**glue_start_job_args)
+
               return {
                   'statusCode': 200,
                   'body': 'File copied successfully'
@@ -117,13 +160,22 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
                   - 's3:GetObject'
                   - 's3:PutObject'
+                  - 's3:ListBucket'
                 Resource:
                   - !Sub 'arn:aws:s3:::${RawS3Bucket}'
                   - !Sub 'arn:aws:s3:::${RawS3Bucket}/*'
                   - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}'
                   - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}/*'
+                  - !Sub 'arn:aws:s3:::${SourceBucketName}'
+                  - !Sub 'arn:aws:s3:::${SourceBucketName}/*'
 
   CombineGlueJob:
     Type: 'AWS::Glue::Job'
@@ -133,11 +185,16 @@ Resources:
       - ProcessedS3Bucket
     Properties:
       Name: combine-glue-job
-      Role: !GetAtt CombineGlueJobRole.Arn
+      Role: !GetAtt CombineGlueJobRole.Arn      
       Command:
-        Name: pythonshell
-        ScriptLocation: !Sub 's3://${RawS3Bucket}/combine_csv.py'
-
+        Name: 'pythonshell'
+        ScriptLocation: !Sub 's3://${SourceBucketName}/combine_csv.py'
+        PythonVersion: '3'
+      DefaultArguments:
+        "--job-language": "python"
+        "--raw_bucket_name": !Ref RawS3Bucket
+        "--processed_bucket_name": !Ref ProcessedS3Bucket
+      
   TransformGlueJobRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -154,12 +211,24 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: "Allow"
-                Action: "s3:*"
-                Resource: "arn:aws:s3:::*"
-              - Effect: "Allow"
-                Action: "glue:*"
-                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${TransformedS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${TransformedS3Bucket}/*'
+                  - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${ProcessedS3Bucket}/*'
+                  - !Sub 'arn:aws:s3:::${SourceBucketName}'
+                  - !Sub 'arn:aws:s3:::${SourceBucketName}/*'              
 
   TransformGlueJob:
     Type: 'AWS::Glue::Job'
@@ -171,5 +240,28 @@ Resources:
       Name: transform-glue-job
       Role: !GetAtt TransformGlueJobRole.Arn
       Command:
-        Name: pythonshell
-        ScriptLocation: !Sub 's3://${ProcessedS3Bucket}/transform_to_parquet.py'
+        Name: 'pythonshell'
+        ScriptLocation: !Sub 's3://${SourceBucketName}/transform_to_parquet.py'
+        PythonVersion: '3'
+      DefaultArguments:        
+        "--transformed_bucket_name": !Ref TransformedS3Bucket
+        "--processed_bucket_name": !Ref ProcessedS3Bucket
+        "--enable-job-insights": 'True'
+
+  TransformGlueJobTrigger:
+    Type: 'AWS::Glue::Trigger'
+    Properties:
+      Name: 'TransformGlueJobTrigger'
+      Type: 'CONDITIONAL'
+      Description: "This glue job trigger starts TransformGlueJob upon successful run of CombineGlueJob."
+      Actions:
+        - JobName: 'transform-glue-job'
+          Arguments: {
+          "--transformed_bucket_name": !Ref TransformedS3Bucket,
+          "--processed_bucket_name": !Ref ProcessedS3Bucket
+          }
+      Predicate:
+        Conditions:
+          - LogicalOperator: 'EQUALS'
+            JobName: !Ref CombineGlueJob
+            State: 'SUCCEEDED'
