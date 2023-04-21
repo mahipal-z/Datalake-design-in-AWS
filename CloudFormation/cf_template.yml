@@ -2,6 +2,10 @@ Parameters:
   SourceBucketName:
     Type: String
     Description: Name of the source S3 bucket that contains the files to copy
+  
+  LocalTimezone:
+    Type: String
+    Description: Name of the local timezone, from the given list.
 
 Resources:
   RawS3Bucket:
@@ -63,6 +67,14 @@ Resources:
                 Action: 'glue:StartJobRun'
                 Resource: 
                   - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${CombineGlueJob}'
+              - Effect: 'Allow'
+                Action: 'glue:GetJobRun'
+                Resource: 
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${CombineGlueJob}'
+              - Effect: 'Allow'
+                Action: 'glue:StartJobRun'
+                Resource: 
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${TransformGlueJob}'
 
   CopyLambdaFunction:
     Type: 'AWS::Lambda::Function'
@@ -78,12 +90,17 @@ Resources:
           RawBucketName: !Ref RawS3Bucket
           SourceName: !Ref SourceBucketName
           ProcessedBucketName: !Ref ProcessedS3Bucket
+          TransformedBucketName: !Ref TransformedS3Bucket
           GlueJobName: !Ref CombineGlueJob
+          GlueJobName2: !Ref TransformGlueJob
+          LocalTz: !Ref LocalTimezone
       Code:
         ZipFile: |
           import boto3
           import os
           import datetime
+          import dateutil.tz
+          import time
           
           s3 = boto3.client('s3')          
           glue = boto3.client('glue')
@@ -98,8 +115,9 @@ Resources:
               print('source bucket is: {}.'.format(source_bucket))
               destination_bucket = os.environ['RawBucketName']
               
-
-              today = datetime.datetime.today().strftime('%Y-%m-%d')  
+              localtz = os.environ['LocalTz']
+              tz = dateutil.tz.gettz(localtz)
+              today = datetime.datetime.now(tz).strftime('%Y-%m-%d')  
               src_prefix = today + '/'
               dest_prefix = today + '/'
               #print('today={}'.format(today))
@@ -122,24 +140,61 @@ Resources:
                     dest_key = os.path.join(dest_prefix, key)
                     s3.copy_object(Bucket=destination_bucket, CopySource={'Bucket': source_bucket, 'Key': src_key}, Key=dest_key)
 
-              # Trigger the Glue job to combine the CSV files
+              # Trigger the Glue jobs to combine the CSV files and convert to parquet
               glue_job_name = os.environ['GlueJobName']
+              glue_job_name2 = os.environ['GlueJobName2']
               processed_bucket = os.environ['ProcessedBucketName']
+              transformed_bucket = os.environ['TransformedBucketName']
               glue_start_job_args = {
                   'JobName': glue_job_name,
                   'Arguments': {
                   "--raw_bucket_name": destination_bucket,
-                  "--processed_bucket_name": processed_bucket
+                  "--processed_bucket_name": processed_bucket,
+                  "--local_timezone": localtz
                   }                  
                   }
-              glue.start_job_run(**glue_start_job_args)
+              resp = glue.start_job_run(**glue_start_job_args)
+              job_run_id = resp['JobRunId']
+
+              # Wait for the first Glue job to complete
+              #waiter = glue.get_waiter('job_run_complete')
+              #waiter.wait(JobName=glue_job_name, RunId=job_run_id)
+              # throws ValueError: Waiter does not exist: job_run_complete
+
+              time.sleep(60)
+
+              # Check the status of the first Glue job run
+              job_run = glue.get_job_run(JobName=glue_job_name, RunId=job_run_id)
+              job_run_status = job_run['JobRun']['JobRunState']
+              print("job_run_status={}".format(job_run_status))
+
+              if job_run_status == 'RUNNING':
+                  print('First Glue job still running.')
+                  time.sleep(60)
+                  job_run = glue.get_job_run(JobName=glue_job_name, RunId=job_run_id)
+                  job_run_status = job_run['JobRun']['JobRunState']     
+
+              # If the first Glue job run was successful, start the second Glue job
+              if job_run_status == 'SUCCEEDED':
+                  glue_start_job_args2 = {
+                  'JobName': glue_job_name2,
+                  'Arguments': {
+                  "--transformed_bucket_name": transformed_bucket,
+                  "--processed_bucket_name": processed_bucket,
+                  "--local_timezone": localtz
+                  }                  
+                  }
+                  resp2 = glue.start_job_run(**glue_start_job_args2)
+                  print('Started second Glue job')
+              else:
+                  print('First Glue job did not succeed')
 
               return {
                   'statusCode': 200,
                   'body': 'File copied successfully'
               }
       Runtime: python3.9
-      Timeout: 60
+      Timeout: 300
       MemorySize: 128
 
   CombineGlueJobRole:
@@ -222,6 +277,7 @@ Resources:
                   - 's3:GetObject'
                   - 's3:PutObject'
                   - 's3:ListBucket'
+                  - 'S3:DeleteObject'
                 Resource:
                   - !Sub 'arn:aws:s3:::${TransformedS3Bucket}'
                   - !Sub 'arn:aws:s3:::${TransformedS3Bucket}/*'
@@ -240,28 +296,17 @@ Resources:
       Name: transform-glue-job
       Role: !GetAtt TransformGlueJobRole.Arn
       Command:
-        Name: 'pythonshell'
-        ScriptLocation: !Sub 's3://${SourceBucketName}/transform_to_parquet.py'
-        PythonVersion: '3'
+        Name: 'glueetl'
+        ScriptLocation: !Sub 's3://${SourceBucketName}/csvtoparquet.py'
       DefaultArguments:        
         "--transformed_bucket_name": !Ref TransformedS3Bucket
         "--processed_bucket_name": !Ref ProcessedS3Bucket
-        "--enable-job-insights": 'True'
-
-  TransformGlueJobTrigger:
-    Type: 'AWS::Glue::Trigger'
-    Properties:
-      Name: 'TransformGlueJobTrigger'
-      Type: 'CONDITIONAL'
-      Description: "This glue job trigger starts TransformGlueJob upon successful run of CombineGlueJob."
-      Actions:
-        - JobName: 'transform-glue-job'
-          Arguments: {
-          "--transformed_bucket_name": !Ref TransformedS3Bucket,
-          "--processed_bucket_name": !Ref ProcessedS3Bucket
-          }
-      Predicate:
-        Conditions:
-          - LogicalOperator: 'EQUALS'
-            JobName: !Ref CombineGlueJob
-            State: 'SUCCEEDED'
+        "--enable-job-insights": 'true'
+        "--job-language": "python"
+        "--enable-metrics": "true"
+        "--enable-continuous-cloudwatch-log": "false"
+      GlueVersion: "2.0"
+      MaxRetries: 0
+      Timeout: 60
+      WorkerType: "Standard"
+      NumberOfWorkers: 1
