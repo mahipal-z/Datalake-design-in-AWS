@@ -2,15 +2,17 @@ import boto3
 import pandas as pd
 import os
 import datetime
+import pytz
 from io import StringIO
 from awsglue.utils import getResolvedOptions
 import sys
 
 # Define the S3 bucket names and file paths
-args = getResolvedOptions(sys.argv, ['raw_bucket_name', 'processed_bucket_name'])
+args = getResolvedOptions(sys.argv, ['raw_bucket_name', 'processed_bucket_name', 'local_timezone'])
 #print("args:{}".format(args))
 src_bucket = args['raw_bucket_name']
 dest_bucket = args['processed_bucket_name']
+localtz = args['local_timezone']
 #print("src_bucket:{}".format(src_bucket))
 
 dest_file = 'combined_file.csv'
@@ -18,9 +20,11 @@ dest_file = 'combined_file.csv'
 # Initialize the S3 client
 s3 = boto3.client('s3')
 
-today = datetime.datetime.today().strftime('%Y-%m-%d')  
+tz = pytz.timezone(localtz)
+today = datetime.datetime.now(tz).strftime('%Y-%m-%d')  
 src_prefix = today + '/'
 dest_prefix = today + '/'
+print("src_prefix:{}".format(src_prefix))
 
 # Get the list of object keys in the input S3 bucket
 src_objects = s3.list_objects_v2(Bucket=src_bucket, Prefix=src_prefix)
