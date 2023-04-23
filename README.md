@@ -21,6 +21,7 @@ A. An S3 bucket that acts as a source, where CSV files are uploaded daily. Follo
 > 1. 'run_configurations.config', 2. 'combine_csv.py', 3. 'csvtoparquet.py'
 
 B. The CSV files must be uploaded in the folder named as the current date in 'YYYY-MM-DD' format. 
+
 C. All the CSV files have the same schema.
 
 ### Setup instructions
