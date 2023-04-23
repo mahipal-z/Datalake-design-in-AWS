@@ -22,7 +22,7 @@ A. An S3 bucket that acts as a source, where CSV files are uploaded daily. Follo
 
 B. The CSV files must be uploaded in the folder named as the current date in 'YYYY-MM-DD' format. 
 
-C. All the CSV files have the same schema.
+C. All the CSV files must have the same schema.
 
 ### Setup instructions
 1. Create a CloudFormation stack using the 'cf_template.yml'. Input source bucket name and local timezone when prompted. Refer to https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568 for list of acceptable string for timezone names. 
