@@ -1,5 +1,5 @@
 # Data lake implementation with AWS
-Implementation of data lake design using CloudFormation and Farm-yield Analytics.
+Implementation of data lake design using CloudFormation and farm-yield analytics.
 
 ![](/lake.PNG)
 
