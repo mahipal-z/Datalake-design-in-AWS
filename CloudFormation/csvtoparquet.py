@@ -1,8 +1,6 @@
 import sys
 import boto3
 import pandas as pd
-import datetime
-import pytz
 #import time
 from awsglue.utils import getResolvedOptions
 from awsglue.context import GlueContext
@@ -14,26 +12,23 @@ sc = SparkContext.getOrCreate()
 glueContext = GlueContext(sc)
 sqlContext = SQLContext(sc)
 # Define the S3 bucket names and file paths
-args = getResolvedOptions(sys.argv, ['transformed_bucket_name', 'processed_bucket_name', 'local_timezone'])
+args = getResolvedOptions(sys.argv, ['transformed_bucket_name', 'processed_bucket_name', 's3_dir'])
 print("args:{}".format(args))
 src_bucket = args['processed_bucket_name']
 dest_bucket = args['transformed_bucket_name']
-localtz = args['local_timezone']
+prefix = args['s3_dir']
 print("src_bucket:{}".format(src_bucket))
 
 src_file = 'combined_file.csv'
 dest_file = 'transformed_file.parquet'
 
-tz = pytz.timezone(localtz)
-today = datetime.datetime.now(tz).strftime('%Y-%m-%d')
-#src_prefix = today + '/'
-dest_prefix = today
+dest_prefix = prefix
 
 # Initialize the S3 client
 s3 = boto3.client('s3')
 
 # Read the CSV files from S3 into pandas dataframes
-df = pd.read_csv(f's3://{src_bucket}/{today}/{src_file}')
+df = pd.read_csv(f's3://{src_bucket}/{prefix}{src_file}')
 
 # Adding a new column
 df['yield_per_hectare'] = df['yield'] / df['area']
@@ -52,13 +47,13 @@ spark_df = sqlContext.createDataFrame(df)
 dynamic_frame = DynamicFrame.fromDF(spark_df, glueContext, 'combined_file')
 
 # Define the output S3 prefix for the Parquet file
-output_prefix = f's3://{dest_bucket}/{today}/'
+output_prefix = f's3://{dest_bucket}/{dest_prefix}'
 
 #time.sleep(10)
 
 #AWS Glue is based on Apache Spark, which partitions data across multiple nodes to achieve high throughput. 
 # When writing data to a file-based sink like Amazon S3, Glue will write a separate file for each partition automatically.
-#To merge those files back to single file, we need to use .caolesce() method.
+#To merge those files back to single file, we need to use .coalesce() method.
 merged_frame = dynamic_frame.coalesce(1)
 # Write the DynamicFrame to the output S3 path in Parquet format
 glueContext.write_dynamic_frame.from_options(
