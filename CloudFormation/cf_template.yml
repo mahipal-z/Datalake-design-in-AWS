@@ -70,7 +70,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'glue:StartJobRun'
                 Resource: 
-                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${TransformGlueJob}'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${TransformGlueJob}'     
 
   CopyLambdaFunction:
     Type: 'AWS::Lambda::Function'
@@ -96,7 +96,7 @@ Resources:
           import time
           
           s3 = boto3.client('s3')          
-          glue = boto3.client('glue')
+          glue = boto3.client('glue')          
           def lambda_handler(event, context):
               #print(event)
               #to get source bucket name from s3 notification event dictionary
@@ -114,18 +114,14 @@ Resources:
               destination_bucket = os.environ['RawBucketName']      
                           
                            
-              # Code to parse parameters defined in the config file
-              #if source_key.endswith('run-configuration.config'):
-              #  # Get the contents of the config file from S3
-              #  config_object = s3.get_object(Bucket=source_bucket, Key=source_key)
-              #  config_data = config_object['Body'].read().decode('utf-8')
-              #  
-              #  # Parse the config file data into a dictionary
-              #  config_params = {}
-              #  for line in config_data.splitlines():
-              #    param, value = line.split('=')
-              #    config_params[param.strip()] = value.strip()
-              #  print(config_params)          
+              # Read the configuration file from S3
+              #response = s3.get_object(Bucket=source_bucket, Key=source_key)
+              #config = json.loads(response['Body'].read().decode())
+              # Update the parameters
+              #config['file_dir'] = src_prefix
+              # Write the updated configuration file back to S3
+              #s3.put_object(Bucket=source_bucket, Key=source_key, Body=json.dumps(config))                       
+
 
               src_objects = s3.list_objects(Bucket=source_bucket, Prefix=src_prefix)
 
@@ -189,12 +185,13 @@ Resources:
                   }
                   resp2 = glue.start_job_run(**glue_start_job_args2)
                   print('Started second Glue job')
+                  
               else:
                   print('First Glue job did not succeed')
 
               return {
                   'statusCode': 200,
-                  'body': 'File copied successfully'
+                  'body': 'Lambda ran successfully'
               }
       Runtime: python3.9
       Timeout: 300

@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 #import base64
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
@@ -105,14 +107,28 @@ if btn_predict:
     result = round(pred[0], 2)
 
     st.write('**:green[The estimated yield per hectare for the given case is]**', result)
+else:
+    st.write('**:red[Please select the parameters and hit Predict to see the result. ]**')
 
 st.subheader('Model Explaination')
 
 if btn_predict:
     #Plot feature importances
     imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
+    #st.write(imp_f)
     imp_f = imp_f.sort_values()
-    imp_f.plot(kind='barh')
+    imp_f.to_frame()
+    #colors = ['crimson',] * 12
+    #colors[0:8] = 'green'
+    #fig = imp_f.plot(kind='barh')
+    fig = px.bar(data_frame=imp_f, orientation='h', labels={"index": "Parameters", "value": "Influence"}, text_auto='.3f', color=imp_f.values, color_continuous_scale='balance')
+    fig.update_layout(showlegend=False)
+    st.write(fig)
+else:
+    st.write('**:red[Please select the parameters and hit Predict to see the model explaination. ]**')
+
+st.write("""The amount of pesticides and fertilization level are bigest influensors in yield prediction. Being in region 5 or 6 also impacts the target varible estimation significantly.
+         \nModel rewards higher fertilization level and pesticide amount to achieve better yield per hectare while penalizes too much of pesticide supply and farms being in region 5 or 6.""")
 
         
 
