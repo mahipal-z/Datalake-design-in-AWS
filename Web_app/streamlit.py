@@ -14,7 +14,7 @@ from PIL import Image
 #import shap
 import streamlit.components.v1 as components
 
-model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Datasets/best_model.sav")
+model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Analytics/best_model.sav")
 
 
 image1 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG')
@@ -105,6 +105,15 @@ if btn_predict:
     result = round(pred[0], 2)
 
     st.write('**:green[The estimated yield per hectare for the given case is]**', result)
+
+st.subheader('Model Explaination')
+
+if btn_predict:
+    #Plot feature importances
+    imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
+    imp_f = imp_f.sort_values()
+    imp_f.plot(kind='barh')
+
         
 
 
