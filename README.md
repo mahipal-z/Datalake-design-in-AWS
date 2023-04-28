@@ -24,11 +24,11 @@ B. All the CSV files must have the same schema.
 ### Setup instructions
 1. Create a CloudFormation stack using the 'cf_template.yml'. Input source bucket name. 
 2. Create S3 event notification in the source bucket 'Properties' with following configurations:
-> Event Name,
-> Suffix: run-configuration.config
-> Event types: Object creation: Put, Post, Copy
-> Destination: Lambda Function: Specify Lambda function: Enter Lambda function ARN (copy arn from lambda created by stack)
-> Save Changes
+> Event Name,  
+> Suffix: run-configuration.config  
+> Event types: Object creation: Put, Post, Copy  
+> Destination: Lambda Function: Specify Lambda function: Enter Lambda function ARN (copy arn from lambda created by stack)  
+> Save Changes  
 3. Upload CSV files to be merged in the desired folder in the source bucket.
 4. To activate the pipeline, upload the 'run_configurations.config' in the same folder where CSV files are located.
 
