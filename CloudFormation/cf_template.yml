@@ -1,3 +1,6 @@
+# The script below is the CloudFormation template to create stack using Amazon Web Services.
+# Refer to readme file for details on what infrastructure can be developed using this template.
+
 Parameters:
   SourceBucketName:
     Type: String
