@@ -1,3 +1,6 @@
+# This script is used by a glueetl job to transform the merged CSV file. 
+# This code adds a column in the dataset and converts the daatframe into Parquet format.
+
 import sys
 import boto3
 import pandas as pd

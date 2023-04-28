@@ -1,3 +1,6 @@
+# This script is used by a python shell glue job to merge multiple csv files.
+
+
 import boto3
 import pandas as pd
 import os

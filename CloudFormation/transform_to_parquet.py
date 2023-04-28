@@ -1,3 +1,7 @@
+# This is an alternative script to transform the merged CSV file, if one choose to use 'python-shell' glue job instead of spark.
+# This is not required to run the current stack to create the data lake.
+# Additional updates in glue environment will be needed to integrate this script in the stack.
+
 import boto3
 import pandas as pd
 import pyarrow as pa

@@ -1,3 +1,9 @@
+# This script will launch a streamlit application using local host that allows user to set farming parameters 
+#and gives prediction of farm yield with model explaination.
+# The location of model artifacts file needs to be updated based on the directory used to run the script.
+# Current script uses 'best_model.sav' file store in the local machine.
+
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -16,7 +22,7 @@ from PIL import Image
 #import shap
 import streamlit.components.v1 as components
 
-model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Analytics/best_model.sav")
+model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/best_model.sav")
 
 
 image1 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG')
