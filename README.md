@@ -1,13 +1,14 @@
-# Data lake Implementation with AWS
-Implementation of data lake design using CloudFormation and Analytics for a farming company.
+# Data lake implementation with AWS
+Implementation of data lake design using CloudFormation and farm-yield analytics.
 
-![](/images/lake.PNG)
+![](/lake.PNG)
+
 
 ## Summary
 This project has three major deliverables.
-1. CloudFormation stack with given AWS resources that works as an ETL pipeline.
+1. CloudFormation stack with given AWS resources that works as a ETL pipeline.
 2. Analysis of farm yield dataset with 1000 records to find useful insights.
-3. Development of ML Application that can predict farm-yield based on the user input and explains model interpretation.
+3. Development of ML Application that can predict farm-yield based on user input.
 
 ## Part-I CloudFormation
 Using the CloudFormation template I developed, one can create a stack to build an ETL pipeline that works as following:
@@ -50,6 +51,3 @@ Using the 'streamlit.py' script, the ML Application can be launched using local 
 2. Update the script with the location for model artifacts.
 3. run the application using local machine using 'streamlit run <script directory>'
 4. Have fun with the user interface!
-
-
-
