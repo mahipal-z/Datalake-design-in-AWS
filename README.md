@@ -6,9 +6,9 @@ Implementation of data lake design using CloudFormation and farm-yield analytics
 
 ## Summary
 This project has three major deliverables.
-1. CloudFormation stack with given AWS resources that works as a ETL pipeline.
+1. CloudFormation stack with given AWS resources that works as an ETL pipeline.
 2. Analysis of farm yield dataset with 1000 records to find useful insights.
-3. Development of ML Application that can predict farm-yield based on user input.
+3. Development of an ML Application that can predict farm-yield based on user input.
 
 ## Part-I CloudFormation
 Using the CloudFormation template I developed, one can create a stack to build an ETL pipeline that works as following:
