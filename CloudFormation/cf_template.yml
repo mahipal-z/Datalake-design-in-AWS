@@ -1,11 +1,10 @@
+# The script below is the CloudFormation template to create stack using Amazon Web Services.
+# Refer to readme file for details on what infrastructure can be developed using this template.
+
 Parameters:
   SourceBucketName:
     Type: String
     Description: Name of the source S3 bucket that contains the files to copy
-  
-  LocalTimezone:
-    Type: String
-    Description: Name of the local timezone, from the given list.
 
 Resources:
   RawS3Bucket:
@@ -74,7 +73,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'glue:StartJobRun'
                 Resource: 
-                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${TransformGlueJob}'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${TransformGlueJob}'     
 
   CopyLambdaFunction:
     Type: 'AWS::Lambda::Function'
@@ -93,36 +92,39 @@ Resources:
           TransformedBucketName: !Ref TransformedS3Bucket
           GlueJobName: !Ref CombineGlueJob
           GlueJobName2: !Ref TransformGlueJob
-          LocalTz: !Ref LocalTimezone
       Code:
         ZipFile: |
           import boto3
-          import os
-          import datetime
-          import dateutil.tz
+          import os          
           import time
           
           s3 = boto3.client('s3')          
-          glue = boto3.client('glue')
+          glue = boto3.client('glue')          
           def lambda_handler(event, context):
-              print(event)
-              #to get source bucket name using environment variable
-              source_bucket = os.environ['SourceName']
-              
+              #print(event)
               #to get source bucket name from s3 notification event dictionary
               #source_bucket = event['Records'][0]['s3']['bucket']['name']
               
-              print('source bucket is: {}.'.format(source_bucket))
-              destination_bucket = os.environ['RawBucketName']
               
-              localtz = os.environ['LocalTz']
-              tz = dateutil.tz.gettz(localtz)
-              today = datetime.datetime.now(tz).strftime('%Y-%m-%d')  
-              src_prefix = today + '/'
-              dest_prefix = today + '/'
-              #print('today={}'.format(today))
-              #print('src_prefix={}'.format(src_prefix))
-              #print('dest_prefix={}'.format(dest_prefix))          
+              #to get source bucket name using environment variable
+              source_bucket = os.environ['SourceName']  
+              source_key = event['Records'][0]['s3']['object']['key']
+              print('source_key={}'.format(source_key))                  
+              src_folder = os.path.dirname(source_key)
+              print('src_folder={}'.format(src_folder))
+              src_prefix = src_folder + '/'
+              dest_prefix = src_folder + '/'                           
+              destination_bucket = os.environ['RawBucketName']      
+                          
+                           
+              # Read the configuration file from S3
+              #response = s3.get_object(Bucket=source_bucket, Key=source_key)
+              #config = json.loads(response['Body'].read().decode())
+              # Update the parameters
+              #config['file_dir'] = src_prefix
+              # Write the updated configuration file back to S3
+              #s3.put_object(Bucket=source_bucket, Key=source_key, Body=json.dumps(config))                       
+
 
               src_objects = s3.list_objects(Bucket=source_bucket, Prefix=src_prefix)
 
@@ -150,7 +152,7 @@ Resources:
                   'Arguments': {
                   "--raw_bucket_name": destination_bucket,
                   "--processed_bucket_name": processed_bucket,
-                  "--local_timezone": localtz
+                  "--s3_dir": src_prefix
                   }                  
                   }
               resp = glue.start_job_run(**glue_start_job_args)
@@ -181,17 +183,18 @@ Resources:
                   'Arguments': {
                   "--transformed_bucket_name": transformed_bucket,
                   "--processed_bucket_name": processed_bucket,
-                  "--local_timezone": localtz
+                  "--s3_dir": src_prefix
                   }                  
                   }
                   resp2 = glue.start_job_run(**glue_start_job_args2)
                   print('Started second Glue job')
+                  
               else:
                   print('First Glue job did not succeed')
 
               return {
                   'statusCode': 200,
-                  'body': 'File copied successfully'
+                  'body': 'Lambda ran successfully'
               }
       Runtime: python3.9
       Timeout: 300
