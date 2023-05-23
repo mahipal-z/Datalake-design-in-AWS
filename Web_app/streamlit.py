@@ -112,7 +112,7 @@ btn_predict = st.sidebar.button("Predict")
 if btn_predict:
     pred = model.predict(test_input)
     result = round(pred[0], 2)
-    res = np.str(result)
+    res = str(result)
 
     st.write('**:green[The estimated yield per hectare for the given case is]**', res)
 else:
