@@ -25,7 +25,7 @@ import streamlit.components.v1 as components
 model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/best_model.sav")
 
 
-image1 = Image.open('/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/crop.PNG')
+image1 = Image.open('Web_app/crop.PNG')
 image2 = Image.open('Web_app/farm_params.png')
 st.set_page_config( 
     page_title="Yield Prediction App",
