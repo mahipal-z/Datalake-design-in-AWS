@@ -8,7 +8,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-#import base64
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -18,8 +17,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
-#import pickle as pkl
-#import shap
 import streamlit.components.v1 as components
 
 model = joblib.load("Web_app/best_model.sav")
@@ -52,10 +49,8 @@ with col2:
     This will help make more informed decisions about farming practices, optimize crop yield, and ultimately, increase profits. 
 """)
     
-st.subheader("To predict the farm yield, you need to follow the steps below:")
 st.markdown("""
-1. Enter/choose the parameters that best describe your farming conditions on the left side bar
-2. Press the "Predict" button and wait for the result.
+Set the parameters on side panel and get yield prediction
 """)
 
 st.subheader("Estimated Yield: ")
@@ -95,7 +90,6 @@ def preprocess(region_code, f_level, p_types):
      
     return input_dict
 
-#user_input=preprocess
 input_dict=preprocess(region_code, f_level, p_types) 
 uv = 72
 inputs = np.array([water,uv,f_level,p_amount,input_dict['pests'][0],input_dict['pests'][1],
@@ -106,46 +100,32 @@ columns = ['water','uv','fertilizer_usage','pesticides','pesticide_a','pesticide
            'region_0','region_1','region_2','region_3','region_4','region_5','region_6','pesticides_2']
 test_input = pd.DataFrame(inputs, columns=columns)
 
-#predict button
-btn_predict = st.sidebar.button("Predict")
+pred = model.predict(test_input)
+result = round(pred[0], 2)
+res = str(result)
 
-if btn_predict:
-    pred = model.predict(test_input)
-    result = round(pred[0], 2)
-    res = str(result)
-
-    st.write('**:green[The estimated yield per hectare for the given case is]**', res)
-else:
-    st.write('**:red[Please select the parameters and hit Predict to see the result. ]**')
+st.write('**:green[The estimated yield per hectare for the given case is]**', res)
 
 st.subheader('Model Explaination')
 
-if btn_predict:
-    #Plot feature importances
-    imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
-    #st.write(imp_f)
-    imp_f = imp_f.sort_values()
-    imp_f.to_frame()
-    #colors = ['crimson',] * 12
-    #colors[0:8] = 'green'
-    #fig = imp_f.plot(kind='barh')
-    fig = px.bar(data_frame=imp_f, orientation='h', labels={"index": "Parameters", "value": "Influence"}, text_auto='.3f', color=imp_f.values, color_continuous_scale='balance')
-    fig.update_layout(showlegend=False)
-    st.write(fig)
-    st.write("""The amount of pesticides and fertilization level are bigest influensors in yield prediction. Being in region 5 or 6 also impacts the target varible estimation significantly.
-         \nModel rewards higher fertilization level and pesticide amount to achieve better yield per hectare while penalizes too much of pesticide supply and farms being in region 5 or 6.""")
-else:
-    st.write('**:red[Please select the parameters and hit Predict to see the model explaination. ]**')
 
+#Plot feature importances
+imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
+imp_f = imp_f.sort_values()
+imp_f.to_frame()
+fig = px.bar(data_frame=imp_f, orientation='h', labels={"index": "Parameters", "value": "Influence"}, text_auto='.3f', color=imp_f.values, color_continuous_scale='balance')
+fig.update_layout(showlegend=False)
+st.write(fig)
+st.write("""The amount of pesticides and fertilization level are bigest influensors in yield prediction. Being in region 5 or 6 also impacts the target varible estimation significantly.
+         \nModel rewards higher fertilization level and pesticide amount to achieve better yield per hectare while penalizes too much of pesticide supply and farms being in region 5 or 6.""")
+#Plots to optimize features
 st.subheader('Parameter Analysis')        
 
-#st.write("""Below you can analyse the effect of individual parameter on the yield generated.""")
 st.write("""The plot below shows the effect of selected parameter on yield, while keeping the other varibles same as what you set in the side panel.""")
 
 param = st.radio('Select the parameter and hit Predict', ["Fertilization level", "Water supply", "Pesticide amount", "Region", "Pesticide Types"],horizontal=True)
 
-
-if btn_predict and param == "Fertilization level":
+if param == "Fertilization level":
     results = []
     inputs = [0,1,2,3,4,5]
     for i in range(6):
@@ -155,7 +135,7 @@ if btn_predict and param == "Fertilization level":
     df = pd.DataFrame(list(zip(inputs, results)), columns =['Fertilization level', 'Yield / hectare'])    
     st.bar_chart(data=df, x='Fertilization level', y='Yield / hectare')
     
-if btn_predict and param == "Water supply":
+if param == "Water supply":
     results = []
     p_range = np.arange(0,p,0.1)
     inputs = list(p_range)
@@ -166,7 +146,7 @@ if btn_predict and param == "Water supply":
     df = pd.DataFrame(list(zip(inputs, results)), columns =['Water Supply', 'Yield / hectare'])    
     st.line_chart(data=df, x='Water Supply', y='Yield / hectare')
 
-if btn_predict and param == "Pesticide amount":
+if param == "Pesticide amount":
     results = []
     p_range = np.arange(0,p,0.1)
     inputs = list(p_range)
@@ -178,7 +158,7 @@ if btn_predict and param == "Pesticide amount":
     df = pd.DataFrame(list(zip(inputs, results)), columns =['Pesticide amount', 'Yield / hectare'])    
     st.line_chart(data=df, x='Pesticide amount', y='Yield / hectare')
     
-if btn_predict and param == "Region":
+if param == "Region":
     test_input[["region_0","region_1","region_2","region_3","region_4","region_5","region_6"]] = 0
     results = []
     inputs = [0,1,2,3,4,5,6]
@@ -202,7 +182,7 @@ if btn_predict and param == "Region":
     df = pd.DataFrame(list(zip(inputs, results)), columns =['Region', 'Yield / hectare'])    
     st.bar_chart(data=df, x='Region', y='Yield / hectare')
     
-if btn_predict and param == "Pesticide Types":
+if param == "Pesticide Types":
     test_input[["pesticide_a","pesticide_b","pesticide_c","pesticide_d"]] = 0
     results = []
     inputs = ['A','B','C','D','AB','AC','AD','BC','BD','CD','ABC','ABD','ACD','BCD','ABCD']
