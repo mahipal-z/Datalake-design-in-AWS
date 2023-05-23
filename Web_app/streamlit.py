@@ -53,7 +53,7 @@ st.markdown("""
 Set the parameters on side panel and get yield prediction
 """)
 
-st.subheader("Estimated Yield: ")
+st.subheader("Estimated Yield")
 
 ######################
 #sidebar layout
