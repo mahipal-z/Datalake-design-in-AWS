@@ -2,3 +2,5 @@ plotly-express==0.4.0
 joblib
 scikit-learn
 matplotlib
+seaborn
+PIL
