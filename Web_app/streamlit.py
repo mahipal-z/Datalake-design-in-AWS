@@ -23,7 +23,7 @@ model = joblib.load("Web_app/best_model.sav")
 
 
 image1 = Image.open('Web_app/crop.PNG')
-image2 = Image.open('Web_app/farm_params.png')
+#image2 = Image.open('Web_app/farm_params.png')
 st.set_page_config( 
     page_title="Yield Prediction App",
     page_icon=image1 
@@ -60,7 +60,7 @@ st.subheader("Estimated Yield: ")
 ######################
 
 st.sidebar.title("Farming Conditions")
-st.sidebar.image(image2, width=250)
+#st.sidebar.image(image2, width=250)
 st.sidebar.write("Choose farming parameters")
 
 #input features
