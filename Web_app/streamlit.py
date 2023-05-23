@@ -22,7 +22,7 @@ from PIL import Image
 #import shap
 import streamlit.components.v1 as components
 
-model = joblib.load("/Users/mahip_cpp2xf3/Datalake-ml-mz/Web_app/best_model.sav")
+model = joblib.load("Web_app/best_model.sav")
 
 
 image1 = Image.open('Web_app/crop.PNG')
