@@ -106,18 +106,7 @@ res = str(result)
 
 st.write('**:green[The estimated yield per hectare for the given case is]**', res)
 
-st.subheader('Model Explaination')
 
-
-#Plot feature importances
-imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
-imp_f = imp_f.sort_values()
-imp_f.to_frame()
-fig = px.bar(data_frame=imp_f, orientation='h', labels={"index": "Parameters", "value": "Influence"}, text_auto='.3f', color=imp_f.values, color_continuous_scale='balance')
-fig.update_layout(showlegend=False)
-st.write(fig)
-st.write("""The amount of pesticides and fertilization level are bigest influensors in yield prediction. Being in region 5 or 6 also impacts the target varible estimation significantly.
-         \nModel rewards higher fertilization level and pesticide amount to achieve better yield per hectare while penalizes too much of pesticide supply and farms being in region 5 or 6.""")
 #Plots to optimize features
 st.subheader('Parameter Analysis')        
 
@@ -199,3 +188,15 @@ if param == "Pesticide Types":
         results.append(round(result_i[0],2))
     df = pd.DataFrame(list(zip(inputs, results)), columns =['Pesticide Types', 'Yield / hectare'])    
     st.bar_chart(data=df, x='Pesticide Types', y='Yield / hectare')
+
+
+#Plot feature importances
+st.subheader('Model Explaination')
+imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
+imp_f = imp_f.sort_values()
+imp_f.to_frame()
+fig = px.bar(data_frame=imp_f, orientation='h', labels={"index": "Parameters", "value": "Influence"}, text_auto='.3f', color=imp_f.values, color_continuous_scale='balance')
+fig.update_layout(showlegend=False)
+st.write(fig)
+st.write("""The amount of pesticides and fertilization level are bigest influensors in yield prediction. Being in region 5 or 6 also impacts the target varible estimation significantly.
+         \nModel rewards higher fertilization level and pesticide amount to achieve better yield per hectare while penalizes too much of pesticide supply and farms being in region 5 or 6.""")
