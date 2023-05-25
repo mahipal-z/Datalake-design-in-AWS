@@ -109,10 +109,13 @@ st.write('**:green[The estimated yield per hectare for the given case is]**', re
 
 #Plots to optimize features
 st.subheader('Parameter Analysis')        
-
 st.write("""The plot below shows the effect of selected parameter on yield, while keeping the other varibles same as what you set in the side panel.""")
 
-param = st.radio('Select the parameter and hit Predict', ["Fertilization level", "Water supply", "Pesticide amount", "Region", "Pesticide Types"],horizontal=True)
+param = st.radio('Select the parameter and hit Predict', ["Fertilization level", 
+                                                          "Water supply", 
+                                                          "Pesticide amount", 
+                                                          "Region", 
+                                                          "Pesticide Types"],horizontal=True)
 
 if param == "Fertilization level":
     results = []
@@ -191,7 +194,7 @@ if param == "Pesticide Types":
 
 
 #Plot feature importances
-st.subheader('Model Explaination')
+st.subheader('Model Explanation')
 imp_f = pd.Series(model.best_estimator_._final_estimator.coef_, index=columns)
 imp_f = imp_f.sort_values()
 imp_f.to_frame()
