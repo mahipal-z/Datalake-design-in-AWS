@@ -52,4 +52,4 @@ Using the 'streamlit.py' script, the ML Application can be launched using local 
 3. Run the application using local machine using 'streamlit run <script directory>'
 4. Have fun with the user interface!
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://mahipal-z-datalake-ml-mz-web-appstreamlit-2ja3tw.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://mahipal-z-farm-yield-analytics-streamlit-l00xze.streamlit.app/)
